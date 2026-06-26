@@ -4,16 +4,17 @@ This repository contains the STM32 firmware and supporting documentation for an 
 
 The project is organized around two firmware implementations with the same functional contract:
 
-- `cmsis_platformio/`: CMSIS implementation using register-level programming for low-level control.
-- `zephyr_platformio/`: Zephyr implementation using DeviceTree, Zephyr drivers, and a compatible BSP.
+- `stm32_ambilight/cmsis_platformio/`: CMSIS implementation using register-level programming for low-level control.
+- `stm32_ambilight/zephyr_platformio/`: Zephyr implementation using DeviceTree, Zephyr drivers, and a compatible BSP.
 
 The Host PC sends RGBW frames over UART. The STM32 receives each frame, validates the Adalight protocol, expands RGBW bytes into PWM duty cycle samples, and uses DMA with `TIM2` to generate the SK6812 waveform on `PB3 / TIM2_CH2`.
 
 ## Documentation
 
-- [Technical Documentation](../docs/TECHNICAL_DOCUMENTATION.md): full system architecture, firmware flow, Adalight protocol, timing, diagnostics, and CMSIS versus Zephyr comparison.
-- [Wiring Guide](../hardware/WIRING.md): physical wiring, external 5V power supply, common ground, power injection, and PB3/TIM2_CH2 data signal notes.
-- [Peripheral Diagnostics Firmware](test/peripheral_diagnostics/README.md): diagnostic Zephyr firmware for validating UART, parser, PWM, DMA, and PB3 output behavior.
+- [Technical Documentation](stm32_ambilight/docs/TECHNICAL_DOCUMENTATION.md): full system architecture, firmware flow, Adalight protocol, timing, diagnostics, and CMSIS versus Zephyr comparison.
+- [Wiring Guide](stm32_ambilight/hardware/WIRING.md): physical wiring, external 5V power supply, common ground, power injection, and PB3/TIM2_CH2 data signal notes.
+- [Peripheral Diagnostics Firmware](stm32_ambilight/zephyr_platformio/test/peripheral_diagnostics/README.md): diagnostic Zephyr firmware for validating UART, parser, PWM, DMA, and PB3 output behavior.
+- 
 ## Core Data Path
 
 ```text
