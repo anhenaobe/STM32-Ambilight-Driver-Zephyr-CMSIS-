@@ -11,10 +11,9 @@ The Host PC sends RGBW frames over UART. The STM32 receives each frame, validate
 
 ## Documentation
 
-- [Technical Documentation](docs/TECHNICAL_DOCUMENTATION.md): full system architecture, firmware flow, protocol, diagnostics, and CMSIS versus Zephyr comparison.
-- [Wiring Guide](hardware/WIRING.md): physical wiring, power supply, common ground, power injection, and signal notes.
-- [Zephyr PlatformIO README](zephyr_platformio/README.md): concise firmware overview and PlatformIO commands for the Zephyr implementation.
-
+- [Technical Documentation](../docs/TECHNICAL_DOCUMENTATION.md): full system architecture, firmware flow, Adalight protocol, timing, diagnostics, and CMSIS versus Zephyr comparison.
+- [Wiring Guide](../hardware/WIRING.md): physical wiring, external 5V power supply, common ground, power injection, and PB3/TIM2_CH2 data signal notes.
+- [Peripheral Diagnostics Firmware](test/peripheral_diagnostics/README.md): diagnostic Zephyr firmware for validating UART, parser, PWM, DMA, and PB3 output behavior.
 ## Core Data Path
 
 ```text
