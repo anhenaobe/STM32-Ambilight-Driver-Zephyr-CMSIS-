@@ -1,89 +1,41 @@
-# Ambilight STM32 Zephyr
+# STM32 Ambilight
 
-Este proyecto implementa el firmware actual de un sistema Ambilight para una tira LED RGBW direccionable. La placa STM32 recibe frames seriales compatibles con Adalight, valida el encabezado y la longitud, convierte los bytes RGBW a muestras PWM y usa DMA para alimentar `TIM2->CCR2`. La salida fisica hacia la tira sale por `PB3 / TIM2_CH2`.
+This repository contains the STM32 firmware and supporting documentation for an Ambilight system that drives a 120-LED SK6812 RGBW LED strip from Adalight RGBW frames sent by a Host PC.
 
-La documentacion tecnica completa esta en:
+The project is organized around two firmware implementations with the same functional contract:
 
-`docs/TECHNICAL_DOCUMENTATION.md`
+- `cmsis_platformio/`: CMSIS implementation using register-level programming for low-level control.
+- `zephyr_platformio/`: Zephyr implementation using DeviceTree, Zephyr drivers, and a compatible BSP.
 
-## Que hace
+The Host PC sends RGBW frames over UART. The STM32 receives each frame, validates the Adalight protocol, expands RGBW bytes into PWM duty cycle samples, and uses DMA with `TIM2` to generate the SK6812 waveform on `PB3 / TIM2_CH2`.
 
-El flujo funcional es:
+## Documentation
+
+- [Technical Documentation](docs/TECHNICAL_DOCUMENTATION.md): full system architecture, firmware flow, protocol, diagnostics, and CMSIS versus Zephyr comparison.
+- [Wiring Guide](hardware/WIRING.md): physical wiring, power supply, common ground, power injection, and signal notes.
+- [Zephyr PlatformIO README](zephyr_platformio/README.md): concise firmware overview and PlatformIO commands for the Zephyr implementation.
+
+## Core Data Path
 
 ```text
-PC / herramienta Ambilight
-  -> UART 921600 baudios
-  -> frame Adalight RGBW
-  -> parser Adalight en STM32
-  -> buffer de color
-  -> conversion RGBW a PWM
-  -> DMA + TIM2_CH2
-  -> PB3
-  -> tira LED SK6812/RGBW
+Host PC -> UART -> Adalight parser -> RGBW color buffer -> PWM buffer -> DMA/TIM2 -> PB3 -> SK6812 LED strip
 ```
 
-El firmware no calcula el contenido visual. Solo recibe bytes de color ya ordenados desde el host, acepta frames validos y genera la senal temporizada que entiende la tira LED.
+## Hardware Summary
 
-## Estado actual
+- LED controller: STM32L432KC.
+- LED strip: SK6812 RGBW, 120 LEDs.
+- Data output: `PB3 / TIM2_CH2`.
+- LED power: external 5V power supply rated for 10A or higher.
+- Required ground reference: common ground between the power supply, LED strip, and STM32.
 
-- Implementacion principal: Zephyr sobre PlatformIO.
-- Entorno por defecto: `nucleo_l432kc`.
-- MCU objetivo documentado para esta version: STM32L432KC.
-- Protocolo de entrada: Adalight con encabezado `Ada`.
-- LEDs activos: `120`.
-- Formato de color: `RGBW`, 4 bytes por LED.
-- Payload por frame: `480` bytes.
-- Buffer PWM: `3940` muestras, incluyendo zona de reset/latch.
-- UART: `USART2` a `921600` baudios.
-- Salida LED: `PB3 / TIM2_CH2`.
+## Build Entry Points
 
-## Estructura principal
-
-- `src/main.c`: inicializa BSP, registra el callback UART, procesa frames completos y dispara DMA.
-- `src/app/adalight.c`: FSM que valida el protocolo Adalight y llena el buffer RGBW.
-- `src/app/translator.c`: expande cada bit RGBW a muestras PWM.
-- `src/bsp/uart.c`: adaptador UART sobre Zephyr.
-- `src/bsp/pwm.c`: configuracion de PWM/TIM2.
-- `src/bsp/dma.c`: transferencia DMA hacia el registro de comparacion PWM.
-- `zephyr/prj.conf`: opciones Zephyr necesarias para UART, DMA y PWM.
-- `zephyr/app.overlay`: habilita USART2, DMA1 y TIM2/PB3 en DeviceTree.
-- `test/`: firmwares de diagnostico para UART, PB3, PWM y DMA.
-
-El documento tecnico tambien describe herramientas Python de host para generar frames Ambilight desde la pantalla, simular colores y ejecutar diagnosticos. En la copia actual leida del proyecto, el directorio `scripts/` no aparece en el arbol de archivos, por lo que este README documenta principalmente el firmware presente en este repositorio.
-
-## Comandos utiles
-
-Compilar el firmware principal:
+The Zephyr implementation is the current PlatformIO firmware path:
 
 ```powershell
+cd zephyr_platformio
 pio run -e nucleo_l432kc
 ```
 
-Compilar pruebas de diagnostico:
-
-```powershell
-pio run -e uart_echo
-pio run -e pb3_gpio
-pio run -e pb3_pwm_zephyr
-pio run -e pb3_pwm_dma
-pio run -e peripheral_diagnostics
-```
-
-Monitorear la salida serial:
-
-```powershell
-pio device monitor -e nucleo_l432kc
-```
-
-## Notas de diagnostico
-
-El firmware principal imprime contadores de diagnostico por UART: bytes recibidos, frames parseados, frames procesados y estado de DMA. Si la tira no responde, el camino recomendado es aislar la falla por etapas:
-
-1. UART recibe bytes.
-2. La FSM acepta frames Adalight.
-3. El translator genera el buffer PWM.
-4. DMA actualiza `TIM2->CCR2`.
-5. `PB3 / TIM2_CH2` emite la forma de onda hacia la tira.
-
-La version CMSIS original y la explicacion larga de arquitectura, protocolo, temporizacion y herramientas host permanecen en `docs/TECHNICAL_DOCUMENTATION.md`.
-
+Diagnostic environments are also defined under `zephyr_platformio/platformio.ini`.
