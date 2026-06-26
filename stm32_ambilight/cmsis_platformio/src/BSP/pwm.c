@@ -1,0 +1,51 @@
+#include "BSP/pwm.h"
+
+void rcc_init(void) {
+    FLASH->ACR |= FLASH_ACR_PRFTEN | FLASH_ACR_ICEN | FLASH_ACR_DCEN;
+    FLASH->ACR &= ~FLASH_ACR_LATENCY;
+    FLASH->ACR |= FLASH_ACR_LATENCY_4WS;
+
+    RCC->CR |= RCC_CR_HSION;
+    while ((RCC->CR & RCC_CR_HSIRDY) == 0);
+
+    // PLLCLK = HSI16 / 1 * 10 / 2 = 80 MHz.
+    RCC->PLLCFGR = RCC_PLLCFGR_PLLSRC_HSI;
+    RCC->PLLCFGR &= ~RCC_PLLCFGR_PLLM_Msk;
+    RCC->PLLCFGR &= ~RCC_PLLCFGR_PLLN_Msk;
+    RCC->PLLCFGR |= (10U << RCC_PLLCFGR_PLLN_Pos);
+    RCC->PLLCFGR &= ~RCC_PLLCFGR_PLLR_Msk;
+    RCC->PLLCFGR |= RCC_PLLCFGR_PLLREN;
+
+    RCC->CR |= RCC_CR_PLLON;
+    while ((RCC->CR & RCC_CR_PLLRDY) == 0);
+
+    RCC->CFGR &= ~RCC_CFGR_SW;
+    RCC->CFGR |= RCC_CFGR_SW_PLL;
+    while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL);
+}
+
+void pwm_init(void) {
+    RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN;
+    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN;
+
+    GPIOB->MODER &= ~GPIO_MODER_MODE3_Msk;
+    GPIOB->MODER |= (2U << GPIO_MODER_MODE3_Pos);
+    GPIOB->OSPEEDR &= ~GPIO_OSPEEDR_OSPEED3_Msk;
+    GPIOB->OSPEEDR |= (3U << GPIO_OSPEEDR_OSPEED3_Pos);
+    GPIOB->AFR[0] &= ~(0xFU << 12);
+    GPIOB->AFR[0] |= (1U << 12);
+
+    TIM2->PSC = 0;
+    TIM2->ARR = 99;
+    TIM2->CNT = 0;
+    TIM2->CCMR1 &= ~TIM_CCMR1_OC2M_Msk;
+    TIM2->CCMR1 |= (6U << TIM_CCMR1_OC2M_Pos);
+    TIM2->CCMR1 |= TIM_CCMR1_OC2PE;
+
+    // TIM2_UP triggers one DMA write to CCR2 per 1.25 us PWM period.
+    TIM2->DIER |= TIM_DIER_UDE;
+
+    TIM2->CCER |= TIM_CCER_CC2E;
+    TIM2->EGR |= TIM_EGR_UG;
+    TIM2->CR1 |= TIM_CR1_CEN;
+}

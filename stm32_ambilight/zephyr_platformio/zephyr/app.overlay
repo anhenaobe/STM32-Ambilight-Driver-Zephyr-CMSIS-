@@ -1,0 +1,29 @@
+#include <zephyr/dt-bindings/pinctrl/stm32-pinctrl.h>
+
+&green_led {
+    status = "disabled";
+};
+
+&pinctrl {
+    tim2_ch2_pb3: tim2_ch2_pb3 {
+        pinmux = <STM32_PINMUX('B', 3, AF1)>;
+    };
+};
+
+&timers2 {
+    status = "okay";
+
+    pwm2: pwm {
+        status = "okay";
+        pinctrl-0 = <&tim2_ch2_pb3>;
+        pinctrl-names = "default";
+    };
+};
+
+&dma1 {
+    status = "okay";
+};
+
+&usart2 {
+    current-speed = <921600>;
+};
