@@ -1,0 +1,33 @@
+# PlatformIO build and local package artifacts
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Python bytecode, caches, and virtual environments
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Editor and operating-system metadata
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Local build and diagnostic output
+build/
+dist/
+*.elf
+*.bin
+*.hex
+*.map
+compile_output*.txt
