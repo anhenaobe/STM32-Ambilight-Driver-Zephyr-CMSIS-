@@ -53,10 +53,12 @@ static void diag_printf(const char *format, ...)
 
 static void diag_uart_rx_callback(uint8_t data)
 {
+    const uint8_t was_ready = frame_ready;
+
     diag_uart_rx_bytes++;
     Adalight_ProcessByte(data);
 
-    if (frame_ready) {
+    if ((!was_ready) && frame_ready) {
         diag_uart_frames++;
     }
 }

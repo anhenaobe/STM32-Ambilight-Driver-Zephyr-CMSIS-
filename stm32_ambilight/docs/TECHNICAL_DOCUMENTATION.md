@@ -9,9 +9,9 @@ Two STM32L432KC firmware implementations are present:
 | Implementation | Directory | Current status |
 | --- | --- | --- |
 | CMSIS | `cmsis_platformio/` | Functional, stable reference implementation. |
-| Zephyr | `zephyr_platformio/` | Development implementation that requires further debugging and hardware validation. |
+| Zephyr | `zephyr_platformio/` | Functional implementation, hardware-validated on STM32L432KC after correcting the TIM2 update DMA request selection. |
 
-The implementations have a similar intended data path, but this repository does not claim that the Zephyr path currently behaves like the CMSIS path.
+Both implementations exercise the same end-to-end host-to-LED data path on the target hardware. They use different firmware frameworks and peripheral integration approaches.
 
 ## Architecture
 
@@ -49,13 +49,13 @@ The CMSIS firmware uses register-level peripheral control. It is organized into 
 
 The Zephyr firmware uses Zephyr configuration, DeviceTree, and driver interfaces while retaining application and BSP-style directories. Its main PlatformIO environment and diagnostic environments are declared in `zephyr_platformio/platformio.ini`; relevant Zephyr files are in `zephyr_platformio/zephyr/`.
 
-It is retained for development and diagnosis. Do not use its presence as evidence of an equivalent, working firmware path.
+The implementation was validated on physical STM32L432KC hardware after correcting the STM32L4 DMA request selection for `TIM2_UP`. The focused diagnostic environments remain in the repository as evidence of the debugging process. See [`ZEPHYR_VALIDATION.md`](ZEPHYR_VALIDATION.md) for the measured symptoms, root cause, correction, and validation boundary.
 
 ## Host-side tools
 
 `host/` contains Python senders and screen-capture utilities. The modular entry point is `adalight_stable_rgbw.py`, and its configuration is in `adalight_stable_rgbw/config.py`. The configured serial port, capture device, display index, and visual calibration values are local-machine settings; they must be reviewed before use on another computer.
 
-The source currently imports `numpy`, `mss`, and `pyserial`. It can also use `dxcam` when selected as the capture backend. The repository does not currently provide a locked dependency file or a hardware-independent host run procedure.
+The source imports `numpy`, `mss`, and `pyserial`, and can use `dxcam` when selected as the capture backend. These direct dependencies are listed without invented version pins in [`host/requirements.txt`](../host/requirements.txt). A serial port, capture backend, display index, and LED geometry must still be selected for the connected host and installation.
 
 ## Hardware and safety
 
@@ -63,5 +63,4 @@ The LED strip uses an external 5 V supply. Do not power the strip from the STM32
 
 ## Validation boundary
 
-Only commands declared by the repository's PlatformIO configurations are documented as build entry points. Hardware output, serial-port assignment, power delivery, and LED behavior require the actual connected system; they are not inferred from a source-only build.
-
+The CMSIS and corrected Zephyr paths have been exercised on the physical STM32L432KC/LED system. The Zephyr evidence and remaining limits are recorded in [`ZEPHYR_VALIDATION.md`](ZEPHYR_VALIDATION.md). Serial-port assignment, capture selection, LED geometry, power delivery, and installation-specific visual calibration remain host/hardware configuration concerns rather than portable defaults.

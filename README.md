@@ -1,72 +1,97 @@
 # STM32 Ambilight Driver
 
-Firmware and host-side tools for an Ambilight-style system that drives a 120-LED SK6812 RGBW strip from Adalight RGBW frames received over UART.
+An Ambilight-style system that captures display-edge colors on a host PC and
+streams Adalight RGBW frames over UART to an STM32L432KC. The microcontroller
+translates each frame into the 800 kHz waveform required by a 120-LED SK6812
+RGBW strip using TIM2, PWM, and DMA.
 
 | Implementation | Location | Status |
 | --- | --- | --- |
-| CMSIS | [`stm32_ambilight/cmsis_platformio`](stm32_ambilight/cmsis_platformio) | Functional and currently the stable reference implementation. |
-| Zephyr | [`stm32_ambilight/zephyr_platformio`](stm32_ambilight/zephyr_platformio) | In development; it requires further debugging before it can be considered equivalent to the CMSIS implementation. |
+| CMSIS | [`stm32_ambilight/cmsis_platformio`](stm32_ambilight/cmsis_platformio) | Functional, hardware-demonstrated reference implementation. |
+| Zephyr | [`stm32_ambilight/zephyr_platformio`](stm32_ambilight/zephyr_platformio) | Functional on STM32L432KC hardware after correcting the TIM2 update DMA request selection. |
 
-This distinction is intentional. The Zephyr implementation is included as development work, not presented as a completed replacement for the stable CMSIS firmware.
+The Zephyr failure was isolated systematically: UART and TIM2/PB3 operated
+correctly, but DMA transfer count did not advance even though configuration
+calls succeeded. On STM32L432, `TIM2_UP` must select request 4 through
+`DMA1_CSELR`; the previous DMAMUX-style value selected the wrong request. See
+the concise [Zephyr hardware validation record](stm32_ambilight/docs/ZEPHYR_VALIDATION.md).
 
 ## System overview
 
 ```text
-Host PC -> UART / Adalight RGBW frame -> STM32 parser -> RGBW-to-PWM translation
-        -> DMA + TIM2_CH2 -> PB3 -> SK6812 RGBW LED strip
+Host screen capture -> edge-color processing -> Adalight RGBW over UART
+                    -> STM32 frame parser -> RGBW-to-PWM translation
+                    -> DMA + TIM2_CH2 -> PB3 -> SK6812 RGBW strip
 ```
 
-The host sends an `Ada` frame containing four color bytes per LED. Firmware validates the header, length, and checksum, then converts the RGBW payload into PWM duty-cycle samples. DMA feeds `TIM2->CCR2`, which produces the SK6812 waveform on `PB3 / TIM2_CH2`.
+The host sends an `Ada` frame containing four color bytes per LED. Firmware
+validates the header, length, and checksum, converts the RGBW payload into PWM
+duty-cycle samples, and transfers those samples to `TIM2->CCR2` through DMA.
 
 ## Hardware
 
-- STM32L432KC development board.
+- STM32L432KC development board (`nucleo_l432kc` PlatformIO target).
 - 120-LED SK6812 RGBW strip.
-- External 5 V supply rated for the LED load (the wiring guide specifies 10 A or higher).
-- Data output: `PB3 / TIM2_CH2` through a 300 ohm series resistor.
+- External 5 V supply rated for the LED load; the wiring guide specifies 10 A
+  or higher for this installation.
+- Data output on `PB3 / TIM2_CH2` through a 300 ohm series resistor.
 - Common ground between the STM32, LED strip, and external supply.
 
-See the [wiring guide](stm32_ambilight/hardware/WIRING.md) before powering the strip.
+Read the [wiring guide](stm32_ambilight/hardware/WIRING.md) before powering the
+strip.
 
 ## Repository layout
 
 ```text
 stm32_ambilight/
-├── cmsis_platformio/     Stable CMSIS firmware and PlatformIO configuration
-├── zephyr_platformio/    Zephyr firmware under development and diagnostic targets
-├── host/                 Python senders and screen-capture utilities
-├── hardware/             Wiring documentation
-└── docs/                 Architecture and protocol documentation
+├── cmsis_platformio/     CMSIS reference firmware and demonstration video
+├── zephyr_platformio/    Hardware-validated Zephyr firmware and diagnostics
+├── host/                 Python screen capture and Adalight senders
+├── hardware/             Wiring and power documentation
+└── docs/                 Architecture and validation records
 ```
 
-## Build information
+## Build and run
 
-Both firmware directories contain a `platformio.ini` file targeting PlatformIO's `nucleo_l432kc` board environment.
-
-Build the stable CMSIS firmware from its directory:
+Both firmware implementations target PlatformIO's `nucleo_l432kc` board.
 
 ```powershell
 cd stm32_ambilight\cmsis_platformio
 pio run -e nucleo_l432kc
+
+cd ..\zephyr_platformio
+pio run -e nucleo_l432kc
 ```
 
-The Zephyr directory defines a corresponding main environment and several diagnostic environments. Its source and configuration are retained for debugging, but a successful build or hardware result is not claimed here. See its [implementation notes](stm32_ambilight/zephyr_platformio/README.md).
+Install the host dependencies and review the machine-specific defaults before
+running the modular sender:
 
-The host tools are Python source files. Their current imports require `numpy`, `mss`, and `pyserial`; `dxcam` is used by the configurable DXGI capture backend. No locked Python dependency set is currently provided, so host execution remains environment-dependent.
+```powershell
+python -m pip install -r stm32_ambilight\host\requirements.txt
+python stm32_ambilight\host\adalight_stable_rgbw.py
+```
 
-## Documentation
+Serial port, LED layout, capture backend, monitor/output selection, and visual
+calibration are intentionally configured in
+[`host/adalight_stable_rgbw/config.py`](stm32_ambilight/host/adalight_stable_rgbw/config.py).
 
-- [Technical documentation](stm32_ambilight/docs/TECHNICAL_DOCUMENTATION.md): architecture, protocol, implementation boundaries, and status.
-- [Wiring guide](stm32_ambilight/hardware/WIRING.md): power, ground, and signal connections.
-- [Zephyr notes](stm32_ambilight/zephyr_platformio/README.md): available PlatformIO environments and diagnostic targets.
+## Demonstration and documentation
 
-## Current limitations and next steps
+- [Ambilight hardware demonstration video](stm32_ambilight/cmsis_platformio/assets/videos/ambilight_program.mp4)
+- [Technical documentation](stm32_ambilight/docs/TECHNICAL_DOCUMENTATION.md)
+- [Zephyr hardware validation](stm32_ambilight/docs/ZEPHYR_VALIDATION.md)
+- [Wiring guide](stm32_ambilight/hardware/WIRING.md)
+- [Zephyr build and diagnostic notes](stm32_ambilight/zephyr_platformio/README.md)
 
-- The CMSIS implementation is the stable reference; its behavior should be preserved when comparing future work.
-- The Zephyr implementation needs debugging and validation on the target hardware.
-- Host configuration currently includes machine-specific serial and capture settings; review `stm32_ambilight/host/adalight_stable_rgbw/config.py` before running it on another PC.
-- Future work should add repeatable firmware validation and a pinned host dependency environment without changing the established protocol or hardware timing accidentally.
+## Validation boundary
+
+CMSIS and the corrected Zephyr implementation have both operated the project
+hardware. The Zephyr validation establishes the tested STM32L432KC UART,
+parser, TIM2/PWM, DMA, PB3, and LED-output path; it is not a claim of product
+certification, exhaustive fault-injection coverage, or operation on other MCU
+variants. Host capture settings remain machine-specific and must be reviewed
+on another PC.
 
 ## License
 
-This project is distributed under the [Apache License 2.0](LICENSE).
+This project is distributed under the [GNU General Public License v3.0](LICENSE).
