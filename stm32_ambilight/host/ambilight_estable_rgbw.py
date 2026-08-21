@@ -1,5 +1,5 @@
 """
-Ambilight estable para STM32L152KB + SK6812 RGBW usando Adalight.
+Ambilight estable para STM32L432KC + SK6812 RGBW usando Adalight.
 
 Dependencias:
     pip install mss numpy pyserial
