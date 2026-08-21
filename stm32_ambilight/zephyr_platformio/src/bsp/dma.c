@@ -10,7 +10,6 @@
 #include "bsp/dma.h"
 
 #define PWM_DMA_CHANNEL 2U
-#define PWM_DMA_SLOT_TIM2_UP 61U
 
 static const struct device *const dma_dev = DEVICE_DT_GET(DT_NODELABEL(dma1));
 static struct dma_block_config pwm_dma_block;
